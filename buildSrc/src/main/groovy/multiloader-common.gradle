@@ -1,0 +1,140 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+}
+
+// Minecraft versions the jar declares. Pass -Pjar_minecraft_versions=1.21.6-1.21.8 when one jar covers several,
+// otherwise it's just the version being built
+def jarVersions = (project.findProperty('jar_minecraft_versions') ?: minecraft_version).tokenize('-')
+def jarFirst = jarVersions.first()
+def jarLast = jarVersions.last()
+ext.jar_minecraft_label = jarFirst == jarLast ? jarFirst : "${jarFirst}-${jarLast}"
+// NeoForge doesn't accept [x,x]
+ext.minecraft_version_range = jarFirst == jarLast ? "[${jarFirst}]" : "[${jarFirst},${jarLast}]"
+ext.fabric_minecraft_range = jarFirst == jarLast ? jarFirst : ">=${jarFirst} <=${jarLast}"
+
+base {
+    archivesName = "${mod_id}-${project.name}-${jar_minecraft_label}"
+}
+
+// Version-specific code: src/<first>-<last>/java and /resources (or src/<version>/...) are added to the main
+// source set when the Minecraft version is in that range
+def mcKey = { String v -> (v.tokenize('.').collect { it as int } + [0, 0, 0]).take(3) }
+def mcCompare = { String a, String b -> [mcKey(a), mcKey(b)].transpose().collect { it[0] <=> it[1] }.find { it != 0 } ?: 0 }
+def versionDirs = (file('src').listFiles() ?: []).findAll { dir ->
+    def m = dir.name =~ /(\d+\.\d+(?:\.\d+)?)(?:-(\d+\.\d+(?:\.\d+)?))?/
+    dir.isDirectory() && m.matches() && mcCompare(m.group(1), minecraft_version) <= 0
+            && mcCompare(minecraft_version, m.group(2) ?: m.group(1)) <= 0
+}.sort { it.name }
+sourceSets.main.java.srcDirs(versionDirs.collect { new File(it, 'java') })
+sourceSets.main.resources.srcDirs(versionDirs.collect { new File(it, 'resources') })
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(java_version)
+    withSourcesJar()
+    withJavadocJar()
+}
+
+repositories {
+    mavenCentral()
+    // https://docs.gradle.org/current/userguide/declaring_repositories.html#declaring_content_exclusively_found_in_one_repository
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = 'Sponge'
+                url = 'https://repo.spongepowered.org/repository/maven-public'
+            }
+        }
+        filter { includeGroupAndSubgroups('org.spongepowered') }
+    }
+    exclusiveContent {
+        forRepositories(
+                maven {
+                    name = 'ParchmentMC'
+                    url = 'https://maven.parchmentmc.org/'
+                },
+                maven {
+                    name = "NeoForge"
+                    url = 'https://maven.neoforged.net/releases'
+                }
+        )
+        filter { includeGroup('org.parchmentmc.data') }
+    }
+    maven {
+        name = 'BlameJared'
+        url = 'https://maven.blamejared.com'
+    }
+}
+
+// Declare capabilities on the outgoing configurations.
+// Read more about capabilities here: https://docs.gradle.org/current/userguide/component_capabilities.html#sec:declaring-additional-capabilities-for-a-local-component
+['apiElements', 'runtimeElements', 'sourcesElements', 'javadocElements'].each { variant ->
+    configurations."$variant".outgoing {
+        capability("$group:${base.archivesName.get()}:$version")
+        capability("$group:$mod_id-${project.name}-${minecraft_version}:$version")
+        capability("$group:$mod_id:$version")
+    }
+    publishing.publications.configureEach {
+        suppressPomMetadataWarningsFor(variant)
+    }
+}
+
+sourcesJar {
+    from(rootProject.file('LICENSE')) {
+        rename { "${it}_${mod_name}" }
+    }
+}
+
+jar {
+    from(rootProject.file('LICENSE')) {
+        rename { "${it}_${mod_name}" }
+    }
+
+    manifest {
+        attributes([
+                'Specification-Title'   : mod_name,
+                'Specification-Vendor'  : mod_author,
+                'Specification-Version' : project.jar.archiveVersion,
+                'Implementation-Title'  : project.name,
+                'Implementation-Version': project.jar.archiveVersion,
+                'Implementation-Vendor' : mod_author,
+                'Built-On-Minecraft'    : minecraft_version
+        ])
+    }
+}
+
+processResources {
+    var expandProps = [
+            'version'                      : version,
+            'group'                        : project.group, //Else we target the task's group.
+            'minecraft_version'            : minecraft_version,
+            'minecraft_version_range'      : minecraft_version_range,
+            'fabric_minecraft_range'       : fabric_minecraft_range,
+            'fabric_version'               : fabric_version,
+            'fabric_loader_version'        : fabric_loader_version,
+            'mod_name'                     : mod_name,
+            'mod_author'                   : mod_author,
+            'mod_id'                       : mod_id,
+            'license'                      : license,
+            'description'                  : project.description,
+            'neoforge_version'             : neoforge_version,
+            'neoforge_loader_version_range': neoforge_loader_version_range,
+            'forge_version'                : project.findProperty('forge_version') ?: '',
+            'forge_loader_version_range'   : project.findProperty('forge_loader_version_range') ?: '',
+            'java_version'                 : java_version
+    ]
+
+    filesMatching(['pack.mcmeta', 'fabric.mod.json', 'META-INF/mods.toml', 'META-INF/neoforge.mods.toml', '*.mixins.json']) {
+        expand expandProps
+    }
+    inputs.properties(expandProps)
+}
+
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            artifactId base.archivesName.get()
+            from components.java
+        }
+    }
+}

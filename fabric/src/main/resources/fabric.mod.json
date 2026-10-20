@@ -1,0 +1,33 @@
+{
+    "schemaVersion": 1,
+    "id": "${mod_id}",
+    "version": "${version}",
+    "name": "${mod_name}",
+    "description": "${description}",
+    "authors": [
+        "${mod_author}"
+    ],
+    "contact": {
+        "email": "IridiumChen@outlook.com"
+    },
+    "license": "${license}",
+    "icon": "illegalplacement.png",
+    "environment": "*",
+    "entrypoints": {
+        "main": [
+            "io.github.ragamuffincat.illegalplacement.fabric.IllegalPlacementFabric"
+        ],
+        "client": [
+            "io.github.ragamuffincat.illegalplacement.fabric.IllegalPlacementFabricClient"
+        ]
+    },
+    "mixins": [
+        "${mod_id}.mixins.json"
+    ],
+    "depends": {
+        "fabricloader": ">=${fabric_loader_version}",
+        "fabric-api": "*",
+        "minecraft": "${fabric_minecraft_range}",
+        "java": ">=${java_version}"
+    }
+}

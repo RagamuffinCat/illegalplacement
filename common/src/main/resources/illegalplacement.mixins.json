@@ -1,0 +1,28 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "io.github.ragamuffincat.illegalplacement.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "BlockInputAccessor",
+    "BlockStateBaseMixin",
+    "BlockStateBaseUpdateMixin",
+    "DiodeBlockAccessor",
+    "HangingEntityMixin",
+    "LevelMixin",
+    "PistonBaseBlockAccessor",
+    "PistonBaseBlockMixin",
+    "RedstoneTorchBlockAccessor",
+    "ServerLevelMixin",
+    "StandingAndWallBlockItemAccessor"
+  ],
+  "client": [
+    "client.KeyMappingMixin",
+    "client.MinecraftMixin",
+    "client.MouseHandlerMixin"
+  ],
+  "server": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
