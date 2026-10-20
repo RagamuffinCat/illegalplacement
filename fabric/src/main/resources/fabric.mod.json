@@ -8,7 +8,10 @@
         "${mod_author}"
     ],
     "contact": {
-        "email": "IridiumChen@outlook.com"
+        "email": "IridiumChen@outlook.com",
+        "homepage": "https://modrinth.com/mod/illegal-placement",
+        "sources": "https://github.com/RagamuffinCat/illegalplacement",
+        "issues": "https://github.com/RagamuffinCat/illegalplacement/issues"
     },
     "license": "${license}",
     "icon": "illegalplacement.png",
